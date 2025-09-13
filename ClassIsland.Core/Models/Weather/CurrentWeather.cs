@@ -17,5 +17,5 @@ public class CurrentWeather
 
     [JsonPropertyName("pubTime")] public DateTime PublishTime { get; set; } = DateTime.Now;
 
-    [JsonPropertyName("wind")] public WindInfo Wind { get; set; } = new();
+    [JsonPropertyName("wind")] public CurrentWindInfo Wind { get; set; } = new();
 }

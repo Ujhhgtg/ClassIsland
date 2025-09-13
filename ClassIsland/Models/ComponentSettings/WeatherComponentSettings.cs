@@ -21,6 +21,7 @@ public class WeatherComponentSettings : ObservableRecipient
     private bool _showRainTime = true;
     private bool _showMainWeatherInfo = true;
     private int _mainWeatherInfoKind = 0;
+    private int _deltaDays = 0;
 
     public int AlertsTitleShowMode
     {
@@ -29,6 +30,18 @@ public class WeatherComponentSettings : ObservableRecipient
         {
             if (value == _alertsTitleShowMode) return;
             _alertsTitleShowMode = value;
+            OnPropertyChanged();
+        }
+    }
+    
+    public int DeltaDays
+    {
+        get => _deltaDays;
+        set
+        {
+            if (value == _deltaDays) return;
+            if (value < 0 || value > 13) return;
+            _deltaDays = value;
             OnPropertyChanged();
         }
     }

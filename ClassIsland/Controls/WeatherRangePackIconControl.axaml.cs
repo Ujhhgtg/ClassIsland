@@ -14,10 +14,10 @@ namespace ClassIsland.Controls;
 /// </summary>
 public partial class WeatherRangePackIconControl : UserControl, INotifyPropertyChanged
 {
-    public static readonly StyledProperty<RangedValue?> ValueProperty = AvaloniaProperty.Register<WeatherRangePackIconControl, RangedValue?>(
+    public static readonly StyledProperty<FromToValuePair?> ValueProperty = AvaloniaProperty.Register<WeatherRangePackIconControl, FromToValuePair?>(
         nameof(Value));
 
-    public RangedValue? Value
+    public FromToValuePair? Value
     {
         get => GetValue(ValueProperty);
         set => SetValue(ValueProperty, value);

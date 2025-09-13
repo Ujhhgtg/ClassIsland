@@ -19,7 +19,7 @@ public static class CommonTaskDialogs
     /// <param name="xamlRoot">XAML 根元素</param>
     public static async Task<object?> ShowDialog(string header, string content, Visual? xamlRoot = null)
     {
-        var dialog = new TaskDialog()
+        var dialog = new TaskDialog
         {
             Content = content,
             SubHeader = header,
