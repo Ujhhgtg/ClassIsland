@@ -36,7 +36,7 @@
                 
                 <controls1:SettingsExpander IconSource="{ci:FluentIconSource &#xF431;}"
                                             Header="显示预警信号"
-                                            Description="启用后，预警将以图标形式显示在天气组件上。"
+                                            Description="启用后，预警将以图标形式显示在天气组件上。当【天数偏移】大于 0 时，预警不会显示。"
                                             IsExpanded="{Binding Settings.ShowAlerts, Mode=OneWay}">
                     <controls1:SettingsExpander.Footer>
                         <ToggleSwitch IsChecked="{Binding Settings.ShowAlerts, Mode=TwoWay}"/>
@@ -59,6 +59,16 @@
                                             Description="启用后，将显示降水即将到来的时间和降水剩余时间。正数代表降水即将到来的时间，负数代表剩余时间。">
                     <controls1:SettingsExpander.Footer>
                         <ToggleSwitch IsChecked="{Binding Settings.ShowRainTime, Mode=TwoWay}"/>
+                    </controls1:SettingsExpander.Footer>
+                </controls1:SettingsExpander>
+                
+                <controls1:SettingsExpander IconSource="{ci:FluentIconSource &#xe4d2;}"
+                                            Header="天数偏移"
+                                            Description="设置显示天气的天数。0 代表今天。正数代表未来第几天。">
+                    <controls1:SettingsExpander.Footer>
+                        <NumericUpDown MinWidth="100" HorizontalAlignment="Center" FontSize="15"
+                                       Maximum="13" Minimum="0" Increment="1"
+                                       Value="{Binding Settings.DeltaDays, Mode=TwoWay}" />
                     </controls1:SettingsExpander.Footer>
                 </controls1:SettingsExpander>
             </StackPanel>

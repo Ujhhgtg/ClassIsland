@@ -42,7 +42,7 @@ public partial class WeatherComponent : ComponentBase<WeatherComponentSettings>
             return weatherInfo.Current;
 
         var nullValueUnitPair = new ValueUnitPair { Value = "", Unit = "" };
-        var temperaturePair = weatherInfo.ForecastDaily.Temperature.Value[deltaDays].OrderedBy(int.Parse);
+        var temperaturePair = weatherInfo.ForecastDaily.Temperature.Value[deltaDays].OrderedIf(p => int.Parse(p.From) > int.Parse(p.To));
         var windDirectionPair = weatherInfo.ForecastDaily.Wind.Direction.Value[deltaDays];
         var windSpeedPair = weatherInfo.ForecastDaily.Wind.Speed.Value[deltaDays];
 
@@ -75,7 +75,6 @@ public partial class WeatherComponent : ComponentBase<WeatherComponentSettings>
     private CurrentWeather CurrentWeather => GetSpecificWeatherDay(SettingsService.Settings.LastWeatherInfo, Settings.DeltaDays);
     private bool ShouldShowDeltaDaysText => Settings.DeltaDays > 0;
     private string DeltaDaysText => Settings.DeltaDays == 1 ? "明天" : $"第{Settings.DeltaDays + 1}天";
-
     private bool ShouldShowAlerts => Settings is { ShowAlerts: true, DeltaDays: 0 };
     
 
