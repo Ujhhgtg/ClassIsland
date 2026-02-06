@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Abstractions.Services;
 using ClassIsland.Core.Attributes;
+using ClassIsland.Core.Models.Weather;
 using ClassIsland.Models.ComponentSettings;
 using ClassIsland.Services;
 using ReactiveUI;
@@ -39,6 +40,51 @@ public partial class WeatherComponent : ComponentBase<WeatherComponentSettings>
         SettingsService = settingsService;
         InitializeComponent();
     }
+    
+    private static CurrentWeather GetSpecificWeatherDay(WeatherInfo weatherInfo, int deltaDays)
+    {
+        if (deltaDays is < 0 or > 13)
+            throw new ArgumentOutOfRangeException();
+
+        if (deltaDays == 0)
+            return weatherInfo.Current;
+
+        var nullValueUnitPair = new ValueUnitPair { Value = "", Unit = "" };
+        var temperaturePair = weatherInfo.ForecastDaily.Temperature.Value[deltaDays].OrderedBy(int.Parse);
+        var windDirectionPair = weatherInfo.ForecastDaily.Wind.Direction.Value[deltaDays];
+        var windSpeedPair = weatherInfo.ForecastDaily.Wind.Speed.Value[deltaDays];
+
+        return new CurrentWeather
+        {
+            FeelsLike = nullValueUnitPair,
+            Humidity = nullValueUnitPair,
+            Pressure = nullValueUnitPair,
+            Temperature = new ValueUnitPair
+            {
+                Value = $"{temperaturePair.From} ~ {temperaturePair.To}",
+                Unit = weatherInfo.ForecastDaily.Temperature.Unit
+            },
+            Visibility = nullValueUnitPair,
+            Weather = weatherInfo.ForecastDaily.Weather.Value[deltaDays].From,
+            PublishTime = weatherInfo.ForecastDaily.PublishTime,
+            Wind = new WindInfo
+            {
+                Direction = new ValueUnitPair
+                {
+                    Value = $"{windDirectionPair.From} ~ {windDirectionPair.To}",
+                    Unit = weatherInfo.ForecastDaily.Wind.Direction.Unit
+                },
+                Speed = new ValueUnitPair
+                { Value = $"{windSpeedPair.From} ~ {windSpeedPair.To}", Unit = weatherInfo.ForecastDaily.Wind.Speed.Unit }
+            }
+        };
+    }
+
+    private CurrentWeather CurrentWeather => GetSpecificWeatherDay(SettingsService.Settings.LastWeatherInfo, Settings.DeltaDays);
+    private bool ShouldShowDeltaDaysText => Settings.DeltaDays > 0;
+    private string DeltaDaysText => Settings.DeltaDays == 1 ? "明天" : $"第{Settings.DeltaDays + 1}天";
+
+    private bool ShouldShowAlerts => Settings is { ShowAlerts: true, DeltaDays: 0 };
 
     private void UpdateAqiInfo()
     {

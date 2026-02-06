@@ -8,7 +8,6 @@
                         xmlns:controls="clr-namespace:ClassIsland.Core.Abstractions.Controls;assembly=ClassIsland.Core"
                         xmlns:componentSettings="clr-namespace:ClassIsland.Models.ComponentSettings"
                         xmlns:controls1="clr-namespace:ClassIsland.Controls"
-                        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
                         xmlns:ci="http://classisland.tech/schemas/xaml/core"
                         xmlns:converters="clr-namespace:ClassIsland.Converters"
                         xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -51,6 +50,15 @@
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                     Classes="items-valign-center"
                     Spacing="6">
+            <Border
+                IsVisible="{Binding ShouldShowDeltaDaysText}"
+                Margin="0 0 2 0"
+                VerticalAlignment="Center"
+                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                Padding="8 2"
+                CornerRadius="16">
+                <TextBlock Text="{Binding DeltaDaysText}" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+            </Border>
             <Panel IsVisible="{Binding Settings.ShowMainWeatherInfo}"
                    Classes="content-only">
                 <Border>
@@ -63,12 +71,12 @@
                     </Border.IsVisible>
                     <StackPanel Orientation="Horizontal">
                         <controls1:WeatherPackIconControl
-                            Code="{Binding SettingsService.Settings.LastWeatherInfo.Current.Weather}"
+                            Code="{Binding CurrentWeather.Weather}"
                             Height="22" VerticalAlignment="Center" />
                         <TextBlock VerticalAlignment="Center" Margin="6 0 0 0">
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Temperature.Value}">
+                            <Run Text="{Binding CurrentWeather.Temperature.Value}">
                             </Run>
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Temperature.Unit}" />
+                            <Run Text="{Binding CurrentWeather.Temperature.Unit}" />
                         </TextBlock>
                     </StackPanel>
                 </Border>
@@ -87,9 +95,9 @@
                              Glyph="&#xE794;"
                              VerticalAlignment="Center"/>
                         <TextBlock VerticalAlignment="Center" Margin="6 0 0 0">
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Humidity.Value}">
+                            <Run Text="{Binding CurrentWeather.Humidity.Value}">
                             </Run>
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Humidity.Unit}" />
+                            <Run Text="{Binding CurrentWeather.Humidity.Unit}" />
                         </TextBlock>
                     </StackPanel>
                 </Border>
@@ -113,13 +121,13 @@
                                                  RenderTransformOrigin="{x:Static RelativePoint.Center}"
                                                  VerticalAlignment="Center">
                             <ci:FluentIcon.RenderTransform>
-                                <RotateTransform Angle="{Binding SettingsService.Settings.LastWeatherInfo.Current.Wind.Direction.Value, Converter={StaticResource StringToDoubleConverter}}" />
+                                <RotateTransform Angle="{Binding CurrentWeather.Wind.Direction.Value, Converter={StaticResource StringToDoubleConverter}}" />
                             </ci:FluentIcon.RenderTransform>
                         </ci:FluentIcon>
                         <TextBlock VerticalAlignment="Center" Margin="0 0 0 0">
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Wind.Speed.Value}">
+                            <Run Text="{Binding CurrentWeather.Wind.Speed.Value}">
                             </Run>
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Wind.Speed.Unit}" />
+                            <Run Text="{Binding CurrentWeather.Wind.Speed.Unit}" />
                         </TextBlock>
                     </StackPanel>
                 </Border>
@@ -155,9 +163,9 @@
                                        FontSize="22"
                                        Glyph="&#xE8E0;" VerticalAlignment="Center"/>
                         <TextBlock VerticalAlignment="Center" Margin="6 0 0 0">
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Pressure.Value}">
+                            <Run Text="{Binding CurrentWeather.Pressure.Value}">
                             </Run>
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.Pressure.Unit}" />
+                            <Run Text="{Binding CurrentWeather.Pressure.Unit}" />
                         </TextBlock>
                     </StackPanel>
                 </Border>
@@ -175,9 +183,9 @@
                                        FontSize="22"
                                        VerticalAlignment="Center"/>
                         <TextBlock VerticalAlignment="Center" Margin="6 0 0 0">
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.FeelsLike.Value}">
+                            <Run Text="{Binding CurrentWeather.FeelsLike.Value}">
                             </Run>
-                            <Run Text="{Binding SettingsService.Settings.LastWeatherInfo.Current.FeelsLike.Unit}" />
+                            <Run Text="{Binding CurrentWeather.FeelsLike.Unit}" />
                         </TextBlock>
                     </StackPanel>
                 </Border>
@@ -187,7 +195,7 @@
                           ClipToBounds="False">
                 <ItemsControl.IsVisible>
                     <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="Settings.ShowAlerts"/>
+                        <Binding Path="ShouldShowAlerts"/>
                         <Binding Path="!!SettingsService.Settings.LastWeatherInfo.Alerts.Count"/>
                     </MultiBinding>
                 </ItemsControl.IsVisible>
