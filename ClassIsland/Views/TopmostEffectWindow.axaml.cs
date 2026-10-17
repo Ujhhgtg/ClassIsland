@@ -71,6 +71,11 @@ public partial class TopmostEffectWindow : Window, ITopmostEffectPlayer
         Logger.LogInformation("播放顶层特效：{}", effect);
         if (effect is not Control element)
             return;
+        if (ViewModel.IsEditMode)
+        {
+            Logger.LogInformation("由于应用处于编辑模式，将丢弃当前顶层特效");
+            return;
+        }
         ViewModel.EffectControls.Add(element);
         if (!element.IsLoaded)
         {
@@ -92,15 +97,14 @@ public partial class TopmostEffectWindow : Window, ITopmostEffectPlayer
         effect.Play();
     }
 
-    public void UpdateWindowPos(Screen screen, double scale)
+    public void UpdateWindowPos(Screen screen, double scale, bool fullscreen)
     {
         //if (!IsShowed)
         //    return;
-        var fullscreen = App.GetService<MainWindow>().ViewModel.IsForegroundFullscreen;
         var bounds = fullscreen ? screen.Bounds : screen.WorkingArea;
         Width = bounds.Width * scale - (fullscreen ? 1 : 0) ;  // 防止因全屏导致的奇奇怪怪的问题
         Height = bounds.Height * scale;
-        Position = new PixelPoint((int)(bounds.X * scale), (int)(bounds.Y * scale));
+        Position = new PixelPoint(bounds.X, bounds.Y);
         // Logger.LogTrace("Updated Window Pos: w:{} h:{} x:{} y:{}", Width, Height, Position.X, Position.Y);
     }
 

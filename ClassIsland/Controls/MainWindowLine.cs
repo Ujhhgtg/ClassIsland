@@ -250,6 +250,7 @@ public class MainWindowLine : ContentControl, INotificationConsumer
     }
 
     private bool _isOverlayOpen = false;
+    private bool _isUnloading = false;
     
     private DateTime _firstProcessNotificationsTime = DateTime.MinValue;
 
@@ -263,7 +264,11 @@ public class MainWindowLine : ContentControl, INotificationConsumer
 
     private bool _isTemplateApplied = false;
 
-    public MainWindow MainWindow { get; } = IAppHost.GetService<MainWindow>();
+    private MainWindow? _mainWindow;
+
+    public MainWindow MainWindow => _mainWindow ??= this.GetVisualRoot() as MainWindow ??
+        this.FindAncestorOfType<MainWindow>() ??
+        throw new InvalidOperationException("MainWindowLine is not attached to MainWindow.");
 
     public SettingsService SettingsService { get; } = IAppHost.GetService<SettingsService>();
 
@@ -424,6 +429,9 @@ public class MainWindowLine : ContentControl, INotificationConsumer
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        _isUnloading = false;
+        _mainWindow = this.GetVisualRoot() as MainWindow ?? this.FindAncestorOfType<MainWindow>() ??
+            throw new InvalidOperationException("MainWindowLine is not attached to MainWindow.");
         MainWindow.MousePosChanged += MainWindowOnMousePosChanged;
         MainWindow.RawInputEvent += MainWindowOnRawInputEvent;
         MainWindow.MainWindowAnimationEvent += MainWindowOnMainWindowAnimationEvent;
@@ -443,6 +451,7 @@ public class MainWindowLine : ContentControl, INotificationConsumer
 
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
+        _isUnloading = true;
         MainWindow.MousePosChanged -= MainWindowOnMousePosChanged;
         MainWindow.RawInputEvent -= MainWindowOnRawInputEvent;
         MainWindow.MainWindowAnimationEvent -= MainWindowOnMainWindowAnimationEvent;
@@ -455,8 +464,10 @@ public class MainWindowLine : ContentControl, INotificationConsumer
         foreach (var ticket in _notificationPlayingTickets)
         {
             ticket.Cancel();
-            Logger.LogTrace("Cancelled ticket id={}", ticket.GetHashCode());
+            Logger.LogTrace("Cancelled ticket id={}, {}", ticket.GetHashCode(), ticket.Request);
         }
+        _notificationQueue.Clear();
+        _notificationPlayingTickets.Clear();
     }
     
     private void MySettingsOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -627,6 +638,14 @@ public class MainWindowLine : ContentControl, INotificationConsumer
 
     public void ReceiveNotifications(IReadOnlyList<NotificationPlayingTicket> notificationRequests)
     {
+        if (_isUnloading)
+        {
+            foreach (var ticket in notificationRequests)
+            {
+                ticket.Cancel();
+            }
+            return;
+        }
         foreach (var newRequest in notificationRequests)
         {
             _notificationQueue.Enqueue(newRequest);
@@ -662,6 +681,10 @@ public class MainWindowLine : ContentControl, INotificationConsumer
 
     private async void ProcessNotification()
     {
+        if (_isUnloading)
+        {
+            return;
+        }
         if (_isOverlayOpen)
         {
             return;
@@ -684,13 +707,14 @@ public class MainWindowLine : ContentControl, INotificationConsumer
         while (_notificationQueue.Count > 0)
         {
             var ticket = _notificationQueue.Dequeue();
+            _notificationPlayingTickets.Add(ticket);
             var request = CurrentNotificationRequest = ticket.Request;
             var settings = ticket.Settings;
             Logger.LogTrace("nid = {notificationId}, tid={ticketId}", request.GetHashCode(), ticket.GetHashCode());
             
             var mask = request.MaskContent;
             var overlay = request.OverlayContent;
-            Logger.LogInformation("处理通知请求：{} {}", request.MaskContent.GetType(), request.OverlayContent?.GetType());
+            Logger.LogInformation("处理通知请求：{} {}", request.MaskContent, request.OverlayContent);
             var cancellationToken = request.CancellationTokenSource.Token;
 
             PreProcessNotificationContent(mask);
@@ -704,7 +728,7 @@ public class MainWindowLine : ContentControl, INotificationConsumer
                     PseudoClasses.Set(":mask-in", false);
                     PseudoClasses.Set(":mask-out", false);
                     notificationsShowed = true;
-                    MaskContent = request.MaskContent;  // 加载Mask元素
+                    MaskContent = request.MaskContent;  // 加载 Mask 元素
                     if (settings.IsNotificationTopmostEnabled && SettingsService.Settings.AllowNotificationTopmost)
                     {
                         MainWindow.AcquireTopmostLock(TopmostLock);
@@ -720,7 +744,7 @@ public class MainWindowLine : ContentControl, INotificationConsumer
 
                     // 播放提醒特效
                     if (settings.IsNotificationEffectEnabled && SettingsService.Settings.AllowNotificationEffect &&
-                        !IsAllComponentsHid && SettingsService.Settings.IsMainWindowVisible)
+                        !IsAllComponentsHid && SettingsService.Settings.IsMainWindowVisible && !request.MaskSession.HasSoundsPlayed)
                     {
                         var center = GetCenter();
                         TopmostEffectWindow.PlayEffect(new RippleEffect(center, MaskContent.Color));
@@ -745,12 +769,16 @@ public class MainWindowLine : ContentControl, INotificationConsumer
                         PseudoClasses.Set(":overlay-in", true);
                         await ticket.ProcessOverlay();
                     }
-                    SpeechService.ClearSpeechQueue();
                 }
             }
             catch (TaskCanceledException)
             {
-                Logger.LogTrace("CANCELLED! nid = {notificationId}, tid={ticketId}", request.GetHashCode(), ticket.GetHashCode());
+                Logger.LogTrace("CANCELLED! tid={ticketId}, {}", ticket.GetHashCode(), request);
+            }
+
+            if (_isUnloading)
+            {
+                break;
             }
 
             if (NotificationHostService.RequestQueue.Count + _notificationQueue.Count < 1 && notificationsShowed)
@@ -783,5 +811,5 @@ public class MainWindowLine : ContentControl, INotificationConsumer
     }
 
     public int QueuedNotificationCount => _notificationQueue.Count;
-    public bool AcceptsNotificationRequests => IsNotificationEnabled && !IsAllComponentsHid && !_isOverlayOpen;
+    public bool AcceptsNotificationRequests => IsNotificationEnabled && !IsAllComponentsHid && !_isOverlayOpen && !_isUnloading;
 }

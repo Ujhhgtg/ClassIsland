@@ -21,6 +21,9 @@ using ClassIsland.Core.Abstractions.Models.Speech;
 using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Services;
 using ClassIsland.Shared.ComponentModels;
+using System.Runtime.InteropServices;
+using ClassIsland.Models.Refreshing;
+using ClassIsland.Services;
 
 namespace ClassIsland.Models;
 
@@ -96,7 +99,7 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     private string _cityId = "weathercn:101010100";
     private string _cityName = "北京 (北京, 中国)";
     private int _mainWindowFontWeight2 = (int)FontWeight.Medium;
-    private int _taskBarIconClickBehavior = 0;
+    private int _taskBarIconClickBehavior = OperatingSystem.IsWindows() ? 0 : 4;
     private bool _showExtraInfoOnTimePoint = true;
     private int _extraInfoType = 0;
     private bool _isCountdownEnabled = true;
@@ -109,7 +112,7 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     private double _debugTimeOffsetSeconds = 0.0;
     private bool _expIsExcelImportEnabled = false;
     private int _timeLayoutEditorIndex = 1;
-    private bool _isSplashEnabled = true;
+    private bool _isSplashEnabled = false;
     private string _splashCustomText = "";
     private string _splashCustomLogoSource = "";
     private bool _isDebugConsoleEnabled = false;
@@ -217,7 +220,6 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     private ObservableCollection<Guid> _trustedProfileIds = [];
     private bool _isNonExactCountdownEnabled = false;
     private bool _showDetailedStatusOnSplash = false;
-
 
     public void NotifyPropertyChanged(string propertyName)
     {
@@ -541,10 +543,12 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     ///     <item>1 - 打开档案编辑窗口</item>
     ///     <item>2 - 显示/隐藏主界面</item>
     ///     <item>3 - 打开换课窗口</item>
+    ///     <item>4 - 打开设置窗口</item>
     /// </list>
     /// </value>
+    /// <remarks>Windows平台上默认值为0，其他平台上默认值为4</remarks>
 
-    [SettingsInfo("点击托盘图标行为", "\uE5C1", enums: ["打开主菜单", "打开档案编辑窗口", "显示/隐藏主界面", "打开换课窗口"], order: 2)]
+    [SettingsInfo("点击托盘图标行为", "\uE5C1", enums: ["打开主菜单", "打开档案编辑窗口", "显示/隐藏主界面", "打开换课窗口","打开设置窗口"], order: 2)]
     public int TaskBarIconClickBehavior
     {
         get => _taskBarIconClickBehavior;
@@ -850,6 +854,120 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         {
             if (value == _reduceProgressAccuracy) return;
             _reduceProgressAccuracy = value;
+            OnPropertyChanged();
+        }
+    }
+
+    #endregion
+
+    #region Refreshing
+
+    public DateTime AppLastStartedTime
+    {
+        get => _appLastStartedTime;
+        set
+        {
+            if (value.Equals(_appLastStartedTime)) return;
+            _appLastStartedTime = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsRefreshingToastEnabled
+    {
+        get => _isRefreshingToastEnabled;
+        set
+        {
+            if (value == _isRefreshingToastEnabled) return;
+            _isRefreshingToastEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int RefreshingToastThresholdDays
+    {
+        get => _refreshingToastThresholdDays;
+        set
+        {
+            if (value == _refreshingToastThresholdDays) return;
+            _refreshingToastThresholdDays = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool ShowRefreshingToastOnNextStart
+    {
+        get => _showRefreshingToastOnNextStart;
+        set
+        {
+            if (value == _showRefreshingToastOnNextStart) return;
+            _showRefreshingToastOnNextStart = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int MaxRefreshingToastCounts
+    {
+        get => _maxRefreshingToastCounts;
+        set
+        {
+            if (value == _maxRefreshingToastCounts) return;
+            _maxRefreshingToastCounts = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int LeftRefreshingToastCounts
+    {
+        get => _leftRefreshingToastCounts;
+        set
+        {
+            if (value == _leftRefreshingToastCounts) return;
+            _leftRefreshingToastCounts = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool RefreshingToastIsOnboardingGuide
+    {
+        get => _refreshingToastIsOnboardingGuide;
+        set
+        {
+            if (value == _refreshingToastIsOnboardingGuide) return;
+            _refreshingToastIsOnboardingGuide = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string OnboardingToastTitle
+    {
+        get => _onboardingToastTitle;
+        set
+        {
+            if (value == _onboardingToastTitle) return;
+            _onboardingToastTitle = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string OnboardingToastBody
+    {
+        get => _onboardingToastBody;
+        set
+        {
+            if (value == _onboardingToastBody) return;
+            _onboardingToastBody = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public RefreshingScopes RefreshingScopes
+    {
+        get => _refreshingScopes;
+        set
+        {
+            if (Equals(value, _refreshingScopes)) return;
+            _refreshingScopes = value;
             OnPropertyChanged();
         }
     }
@@ -1586,7 +1704,6 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         }
     }
 
-
     public UpdateStatus LastUpdateStatus
     {
         get => _lastUpdateStatus;
@@ -1742,8 +1859,20 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
     private bool _isPluginsUpdateNotificationEnabled = true;
     private int _windowTopmostRecheckMode = 0;
     private bool _isScreenRecordingModeEnabled = false;
+    private bool _isWindowCaptureBlockingEnabled = false;
     private bool _hasEditModeTutorialShown = false;
     private int _classPlanEditModeIndex = 1;
+    private bool _isRefreshingToastEnabled = true;
+    private int _refreshingToastThresholdDays = 20;
+    private bool _showRefreshingToastOnNextStart = false;
+    private int _leftRefreshingToastCounts = 0;
+    private bool _refreshingToastIsOnboardingGuide = false;
+    private string _onboardingToastTitle = RefreshingService.DefaultOnboardingToastTitle;
+    private string _onboardingToastBody = RefreshingService.DefaultOnboardingToastBody;
+    private DateTime _appLastStartedTime = DateTime.Now;
+    private int _maxRefreshingToastCounts = 5;
+    private RefreshingScopes _refreshingScopes = new();
+    private bool _isThemeSeparateInfoVisible = true;
 
     public bool IsIgnoreWorkAreaEnabled
     {
@@ -1787,7 +1916,6 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         {
             if (value == _windowDockingMonitorIndex) return;
 
-
             if (value < 0)
             {
                 throw new ArgumentException("选择不能为空。");
@@ -1815,6 +1943,17 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         {
             if (value == _isScreenRecordingModeEnabled) return;
             _isScreenRecordingModeEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsWindowCaptureBlockingEnabled
+    {
+        get => _isWindowCaptureBlockingEnabled;
+        set
+        {
+            if (value == _isWindowCaptureBlockingEnabled) return;
+            _isWindowCaptureBlockingEnabled = value;
             OnPropertyChanged();
         }
     }
@@ -2256,6 +2395,18 @@ public class Settings : ObservableRecipient, ILessonControlSettings, INotificati
         {
             if (value == _isThemeWarningVisible) return;
             _isThemeWarningVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
+
+    public bool IsThemeSeparateInfoVisible
+    {
+        get => _isThemeSeparateInfoVisible;
+        set
+        {
+            if (value == _isThemeSeparateInfoVisible) return;
+            _isThemeSeparateInfoVisible = value;
             OnPropertyChanged();
         }
     }

@@ -5,6 +5,7 @@ using ClassIsland.Core.Abstractions.Services.Management;
 using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Enums;
 using ClassIsland.Core.Models.Plugin;
+using ClassIsland.Core.Services.Registry;
 using ClassIsland.Models.Plugins;
 using ClassIsland.Services.Management;
 using ClassIsland.Shared;
@@ -42,7 +43,7 @@ public class PluginService : IPluginService
 
     public static readonly string PluginConfigsFolderPath = Path.Combine(CommonDirectories.AppConfigPath, "Plugins");
 
-    public static Dictionary<PluginInfo,PluginManifest> PluginLoadedStatus { get; internal set; } =new();
+    public static List<PluginInfo> PluginLoadedStatus { get; internal set; } =new();
 
     internal static readonly Dictionary<string, PluginLoadContext> PluginLoadContexts = new();
 
@@ -66,6 +67,7 @@ public class PluginService : IPluginService
 
         var deserializer = new DeserializerBuilder()
             .IgnoreUnmatchedProperties()
+            .WithTypeConverter(new OSPlatformTypeConverter_Yaml())
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .Build();
 
@@ -73,6 +75,7 @@ public class PluginService : IPluginService
         {
             try
             {
+                bool isEnabledBefore = true;
                 using var pkg = ZipFile.OpenRead(pkgPath);
                 var mf = pkg.GetEntry(PluginManifestFileName);
                 if (mf == null)
@@ -80,12 +83,18 @@ public class PluginService : IPluginService
                 var mfText = new StreamReader(mf.Open()).ReadToEnd();
                 var manifest = deserializer.Deserialize<PluginManifest>(mfText);
                 var targetPath = Path.Combine(PluginsRootPath, manifest.Id);
+                Console.Write($"正在处理插件安装: {manifest.Name}({manifest.Id},{manifest.Version})...");
                 if (Directory.Exists(targetPath))
                 {
+                    if(File.Exists(Path.Combine(targetPath,".disabled")))
+                    {
+                        isEnabledBefore = false;
+                    }
                     Directory.Delete(targetPath, true);
                 }
                 Directory.CreateDirectory(targetPath);
                 ZipFile.ExtractToDirectory(pkgPath, targetPath);
+                if(!isEnabledBefore) File.WriteAllText(Path.Combine(targetPath, ".disabled"), "");
                 InstalledPlugins.Add(manifest);
             }
             catch (Exception e)
@@ -93,6 +102,7 @@ public class PluginService : IPluginService
                 Console.WriteLine(e);
             }
             File.Delete(pkgPath);
+            Console.WriteLine("完成!");
         }
     }
 
@@ -108,6 +118,7 @@ public class PluginService : IPluginService
 
         var deserializer = new DeserializerBuilder()
             .IgnoreUnmatchedProperties()
+            .WithTypeConverter(new OSPlatformTypeConverter_Yaml())
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .Build();
 
@@ -139,8 +150,10 @@ public class PluginService : IPluginService
             };
             if (info.IsUninstalling)
             {
+                Console.Write($"正在处理插件卸载: {manifest.Name}({manifest.Id},{manifest.Version})...");
                 Directory.Delete(pluginDir, true);
                 UninstalledPlugins.Add(manifest);
+                Console.WriteLine("完成!");
                 continue;
             }
             if (IPluginService.LoadedPluginsIds.Contains(manifest.Id))
@@ -150,13 +163,13 @@ public class PluginService : IPluginService
             if (!info.IsEnabled)
             {
                 info.LoadStatus = PluginLoadStatus.Disabled;
-                PluginLoadedStatus.Add(info,manifest);
+                PluginLoadedStatus.Add(info);
             }
             if (info.IsEnabled && Version.TryParse(info.Manifest.ApiVersion, out var apiVersion) && apiVersion < new Version(2, 0, 0, 0))
             {
                 info.LoadStatus = PluginLoadStatus.Error;
                 info.Exception = new InvalidOperationException($"不兼容的 API 版本 {apiVersion}。插件的 API 版本需要至少为 2.0.0.0 才能被当前版本的 ClassIsland 加载。");
-                PluginLoadedStatus.Add(info,manifest);
+                PluginLoadedStatus.Add(info);
             }
         }
         var loadOrder = ResolveLoadOrder(IPluginService.LoadedPluginsInternal.Where(x => x.LoadStatus == PluginLoadStatus.NotLoaded).ToList());
@@ -195,18 +208,28 @@ public class PluginService : IPluginService
                 if (!Directory.Exists(entranceObj.PluginConfigFolder))
                     Directory.CreateDirectory(entranceObj.PluginConfigFolder);
                 entranceObj.Info = info;
-                entranceObj.Initialize(context, services);
+                // 在插件 Initialize 期间设置当前注册插件上下文，以便组件注册时自动捕获来源
+                var previousPlugin = ComponentRegistryService.CurrentRegisteringPlugin.Value;
+                ComponentRegistryService.CurrentRegisteringPlugin.Value = info;
+                try
+                {
+                    entranceObj.Initialize(context, services);
+                }
+                finally
+                {
+                    ComponentRegistryService.CurrentRegisteringPlugin.Value = previousPlugin;
+                }
                 services.AddSingleton(typeof(PluginBase), entranceObj);
                 services.AddSingleton(entrance, entranceObj);
                 info.LoadStatus = PluginLoadStatus.Loaded;
                 // Console.WriteLine($"Initialized plugin: {pluginDir} ({manifest.Version})");
-                PluginLoadedStatus.Add(info,manifest);
+                PluginLoadedStatus.Add(info);
             }
             catch (Exception ex)
             {
                 info.Exception = ex;
                 info.LoadStatus = PluginLoadStatus.Error;
-                PluginLoadedStatus.Add(info,manifest);
+                PluginLoadedStatus.Add(info);
                 // Console.WriteLine($"Failed to initialize plugin {manifest.Name}:"+ex);
             }
         }

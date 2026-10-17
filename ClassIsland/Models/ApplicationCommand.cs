@@ -44,6 +44,7 @@ public class ApplicationCommand
     public bool Safe { get; set; } = false;
 
     public string ImportV1 { get; set; } = "";
+    public string ImportV2 { get; set; } = "";
 
     public bool SkipOobe { get; set; } = false;
 
@@ -52,4 +53,10 @@ public class ApplicationCommand
     public bool ImportComplete { get; set; } = false;
 
     public bool ImportV1Complete { get; set; } = false;
+
+    public bool Refreshing { get; set; } = false;
+
+    public bool Onboarding { get; set; } = false;
+
+    public bool Autostartup { get; set; } = false;
 }

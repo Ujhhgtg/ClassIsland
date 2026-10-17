@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using ClassIsland.Controls.EditMode;
 using ClassIsland.Core.Abstractions.Services;
@@ -14,12 +14,14 @@ public partial class EditModeViewModel(
     MainWindow mainWindow,
     IComponentsService componentsService,
     SettingsService settingsService,
-    IUriNavigationService uriNavigationService) : ObservableObject
+    IUriNavigationService uriNavigationService,
+    ITutorialService tutorialService) : ObservableObject
 {
     public MainWindow MainWindow { get; } = mainWindow;
     public IComponentsService ComponentsService { get; } = componentsService;
     public SettingsService SettingsService { get; } = settingsService;
     public IUriNavigationService UriNavigationService { get; } = uriNavigationService;
+    public ITutorialService TutorialService { get; } = tutorialService;
 
     public MainViewModel MainViewModel => MainWindow.ViewModel;
 
@@ -28,6 +30,7 @@ public partial class EditModeViewModel(
     [ObservableProperty] private VerticalDrawerOpenState _mainDrawerState;
     [ObservableProperty] private bool _isDrawerTempCollapsed;
     [ObservableProperty] private IReadOnlyList<ComponentInfo> _componentInfos = [];
+    [ObservableProperty] private IReadOnlyList<ComponentGroup> _componentGroups = [];
     [ObservableProperty] private int _componentSettingsTabIndex = 0;
     [ObservableProperty] private string _filterText = "";
     [ObservableProperty] private string _createProfileName = "";

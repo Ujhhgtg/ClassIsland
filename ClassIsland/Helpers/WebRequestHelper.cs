@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using ClassIsland.Core.Converters;
 using ClassIsland.Shared;
 using ClassIsland.Shared.Helpers;
 
@@ -16,7 +17,13 @@ namespace ClassIsland.Helpers;
 
 public class WebRequestHelper(Uri? baseUri = null, bool phainon = false)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters =
+        {
+            new ColorHexJsonConverter()
+        }
+    };
     private HttpClient HttpClient { get; } = new(new SentryHttpMessageHandler())
     {
         BaseAddress = baseUri
@@ -81,7 +88,7 @@ public class WebRequestHelper(Uri? baseUri = null, bool phainon = false)
             }
         }
 
-        throw new Exception($"在 {retries} 次重试后无法完成对 {uri} 的GET请求。", innerException);
+        throw new Exception($"在 {retries} 次重试后无法完成对 {uri} 的GET请求：{innerException?.Message}", innerException);
     }
 
     public async Task<T> SaveJson<T>(Uri uri, string path, int retries = 3, CancellationToken? cancellationToken = null,

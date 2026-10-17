@@ -41,6 +41,8 @@ public class SettingsService(ILogger<SettingsService> Logger, IManagementService
 
     public bool WillMigrateProfileTrustedState { get; set; } = false;
 
+    public bool WillMigrateInitTutorial { get; set; } = false;
+
     private async Task LoadManagementSettingsAsync()
     {
         if (!ManagementService.Manifest.DefaultSettingsSource.IsNewerAndNotNull(ManagementService.Versions
@@ -145,6 +147,22 @@ public class SettingsService(ILogger<SettingsService> Logger, IManagementService
                 PlatformServices.DesktopService.IsUrlSchemeRegistered = true;
             }
             Logger.LogInformation("成功迁移了 2.0.0.2 以前的设置。");
+        }
+        
+        if (Settings.LastAppVersion < Version.Parse("2.0.3.0") )
+        {
+            WillMigrateInitTutorial = true;
+            Logger.LogInformation("成功迁移了 2.0.3.0 以前的设置。");
+        }
+
+        if (Settings.LastAppVersion < Version.Parse("2.0.3.3"))
+        {
+            if (PlatformServices.DesktopService.IsAutoStartEnabled)
+            {
+                PlatformServices.DesktopService.IsAutoStartEnabled = false;
+                PlatformServices.DesktopService.IsAutoStartEnabled = true;
+            }
+            Logger.LogInformation("成功迁移了 2.0.3.3 以前的自启动快捷方式。");
         }
         
     }
